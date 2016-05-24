@@ -13,6 +13,8 @@ class YamlConverter
 
     protected $modelNamespace;
 
+    protected $modelPrefix;
+
     /**
      * @return mixed
      */
@@ -61,6 +63,21 @@ class YamlConverter
         $this->modelNamespace = $modelNamespace;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getModelPrefix()
+    {
+        return ucfirst($this->modelPrefix);
+    }
+
+    /**
+     * @param mixed $modelPrefix
+     */
+    public function setModelPrefix($modelPrefix)
+    {
+        $this->modelPrefix = $modelPrefix;
+    }
 
     public function convert()
     {
@@ -129,10 +146,11 @@ class YamlConverter
         foreach ($attr['manyToOne'] as $manyToOneKey => $manyToOne) {
 
             $targetEntity = $manyToOne['targetEntity'];
+            $foreignKey = $this->convertCamelCaseToUnderline($targetEntity) . '_id';
 
             $fileContent .= "    public function {$manyToOneKey}()\n";
             $fileContent .= "    {\n";
-            $fileContent .= "        return \$this->belongsTo('{$this->getModelNamespace()}\\{$targetEntity}');\n";
+            $fileContent .= "        return \$this->belongsTo('{$this->getModelNamespace()}\\{$this->getModelPrefix()}{$targetEntity}', '$foreignKey');\n";
             $fileContent .= "    }\n\n";
 
         }
@@ -140,10 +158,11 @@ class YamlConverter
         foreach ($attr['oneToOne'] as $oneToOneKey => $oneToOne) {
 
             $targetEntity = $oneToOne['targetEntity'];
+            $foreignKey = $this->convertCamelCaseToUnderline($targetEntity) . '_id';
 
             $fileContent .= "    public function {$oneToOneKey}()\n";
             $fileContent .= "    {\n";
-            $fileContent .= "        return \$this->belongsTo'{$this->getModelNamespace()}\\{$targetEntity}');\n";
+            $fileContent .= "        return \$this->belongsTo'{$this->getModelNamespace()}\\{$this->getModelPrefix()}{$targetEntity}', '{$foreignKey}');\n";
             $fileContent .= "    }\n\n";
 
         }
@@ -151,10 +170,11 @@ class YamlConverter
         foreach ($attr['oneToMany'] as $oneToManyKey => $oneToMany) {
 
             $targetEntity = $oneToMany['targetEntity'];
+            $foreignKey = $this->convertCamelCaseToUnderline($entityName) . '_id';
 
             $fileContent .= "    public function {$oneToManyKey}()\n";
             $fileContent .= "    {\n";
-            $fileContent .= "        return \$this->hasMany('{$this->getModelNamespace()}\\{$targetEntity}');\n";
+            $fileContent .= "        return \$this->hasMany('{$this->getModelNamespace()}\\{$this->getModelPrefix()}{$targetEntity}', '$foreignKey');\n";
             $fileContent .= "    }\n\n";
         }
 
@@ -168,9 +188,12 @@ class YamlConverter
                 $tableName = $manyToMany['joinTable']['name'];
             }
 
+            $foreignKey = $this->convertCamelCaseToUnderline($entityName) . '_id';
+            $otherKey = $this->convertCamelCaseToUnderline($targetEntity) . '_id';
+
             $fileContent .= "    public function {$manyToManyKey}()\n";
             $fileContent .= "    {\n";
-            $fileContent .= "        return \$this->belongsToMany('{$this->getModelNamespace()}\\{$targetEntity}', '{$tableName}');\n";
+            $fileContent .= "        return \$this->belongsToMany('{$this->getModelNamespace()}\\{$this->getModelPrefix()}{$targetEntity}', '{$tableName}', '{$foreignKey}', '{$otherKey}');\n";
             $fileContent .= "    }\n\n";
         }
 
@@ -182,21 +205,23 @@ class YamlConverter
             mkdir($dirPath);
         }
 
-        $modelPath = $dirPath . $entityName . '.php';
+        $modelPath = $dirPath . 'Base' . $entityName . '.php';
 
         file_put_contents($modelPath, $fileContent);
     }
 
     protected function generateExtendsFile($entityName, $attr)
     {
+        $prefix = $this->getModelPrefix();
+
         $fileContent = "<?php\n\n";
         $fileContent .= "namespace {$this->getModelNamespace()};\n\n";
         $fileContent .= "use {$this->getModelNamespace()}\\Base\\Base{$entityName};\n\n";
-        $fileContent .= "class {$entityName} extends Base{$entityName}\n";
+        $fileContent .= "class {$prefix}{$entityName} extends Base{$entityName}\n";
         $fileContent .= "{\n\n";
         $fileContent .= "}";
 
-        $modelPath = $this->getModelPath() . DIRECTORY_SEPARATOR . $entityName . '.php';
+        $modelPath = $this->getModelPath() . DIRECTORY_SEPARATOR . $prefix . $entityName . '.php';
         if (file_exists($modelPath)) {
             return;
         }

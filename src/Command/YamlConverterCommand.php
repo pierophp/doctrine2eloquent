@@ -30,6 +30,11 @@ class YamlConverterCommand extends Command
                 null,
                 InputOption::VALUE_REQUIRED,
                 'Model Path'
+            )->addOption(
+                'model_prefix',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Model Path'
             );
     }
 
@@ -39,6 +44,7 @@ class YamlConverterCommand extends Command
         $yamlConverter->setYamlPath($input->getOption('yaml_path'));
         $yamlConverter->setModelPath($input->getOption('model_path'));
         $yamlConverter->setModelNamespace($input->getOption('model_namespace'));
+        $yamlConverter->setModelPrefix($input->getOption('model_prefix'));
         $yamlConverter->convert();
     }
 }
