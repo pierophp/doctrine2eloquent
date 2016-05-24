@@ -96,10 +96,33 @@ class YamlConverter
 
         $entityName = explode('\\', $entityKey);
         $entityName = $entityName[count($entityName) - 1];
+
+        $this->generateBaseFile($entityName, $attr);
+        $this->generateExtendsFile($entityName, $attr);
+    }
+
+    protected function convertCamelCaseToUnderline($string)
+    {
+        preg_match_all('/((?:^|[A-Z])[a-z]+)/', $string, $matches);
+
+        if (!isset($matches[0])) {
+            return $string;
+        }
+
+        $response = strtolower(implode('_', $matches[0]));
+
+        return $response;
+    }
+
+    protected function generateBaseFile($entityName, $attr)
+    {
         $fileContent = "<?php\n\n";
-        $fileContent .= "namespace {$this->getModelNamespace()};\n\n";
+        $fileContent .= "namespace {$this->getModelNamespace()}\\Base;\n\n";
         $fileContent .= "use Illuminate\\Database\\Eloquent\\Model;\n\n";
-        $fileContent .= "class {$entityName} extends Model\n";
+        $fileContent .= "/*\n";
+        $fileContent .= " * AUTO GENERATED - DO NOT CHANGE HERE\n";
+        $fileContent .= " * */\n\n";
+        $fileContent .= "class Base{$entityName} extends Model\n";
         $fileContent .= "{\n\n";
         $fileContent .= "    protected \$table = '{$attr['table']}';\n\n";
 
@@ -140,10 +163,10 @@ class YamlConverter
             $targetEntity = $manyToMany['targetEntity'];
 
             if (!isset($manyToMany['joinTable']['name'])) {
-                continue;
+                $tableName = $this->convertCamelCaseToUnderline($targetEntity) . '_has_' . $manyToMany['mappedBy'];
+            } else {
+                $tableName = $manyToMany['joinTable']['name'];
             }
-
-            $tableName = $manyToMany['joinTable']['name'];
 
             $fileContent .= "    public function {$manyToManyKey}()\n";
             $fileContent .= "    {\n";
@@ -153,7 +176,30 @@ class YamlConverter
 
         $fileContent .= "}";
 
+        $dirPath = $this->getModelPath() . DIRECTORY_SEPARATOR . 'Base' . DIRECTORY_SEPARATOR;
+
+        if (!file_exists($dirPath)) {
+            mkdir($dirPath);
+        }
+
+        $modelPath = $dirPath . $entityName . '.php';
+
+        file_put_contents($modelPath, $fileContent);
+    }
+
+    protected function generateExtendsFile($entityName, $attr)
+    {
+        $fileContent = "<?php\n\n";
+        $fileContent .= "namespace {$this->getModelNamespace()};\n\n";
+        $fileContent .= "use {$this->getModelNamespace()}\\Base\\Base{$entityName};\n\n";
+        $fileContent .= "class {$entityName} extends Base{$entityName}\n";
+        $fileContent .= "{\n\n";
+        $fileContent .= "}";
+
         $modelPath = $this->getModelPath() . DIRECTORY_SEPARATOR . $entityName . '.php';
+        if (file_exists($modelPath)) {
+            return;
+        }
 
         file_put_contents($modelPath, $fileContent);
     }
