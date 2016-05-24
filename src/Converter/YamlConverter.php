@@ -90,6 +90,10 @@ class YamlConverter
             $attr['oneToMany'] = array();
         }
 
+        if (!isset($attr['manyToMany'])) {
+            $attr['manyToMany'] = array();
+        }
+
         $entityName = explode('\\', $entityKey);
         $entityName = $entityName[count($entityName) - 1];
         $fileContent = "<?php\n\n";
@@ -128,6 +132,22 @@ class YamlConverter
             $fileContent .= "    public function {$oneToManyKey}()\n";
             $fileContent .= "    {\n";
             $fileContent .= "        return \$this->hasMany('{$this->getModelNamespace()}\\{$targetEntity}');\n";
+            $fileContent .= "    }\n\n";
+        }
+
+        foreach ($attr['manyToMany'] as $manyToManyKey => $manyToMany) {
+
+            $targetEntity = $manyToMany['targetEntity'];
+
+            if (!isset($manyToMany['joinTable']['name'])) {
+                continue;
+            }
+
+            $tableName = $manyToMany['joinTable']['name'];
+
+            $fileContent .= "    public function {$manyToManyKey}()\n";
+            $fileContent .= "    {\n";
+            $fileContent .= "        return \$this->belongsToMany('{$this->getModelNamespace()}\\{$targetEntity}', '{$tableName}');\n";
             $fileContent .= "    }\n\n";
         }
 
